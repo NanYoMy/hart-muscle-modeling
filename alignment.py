@@ -60,3 +60,21 @@ def align_axis_pca(data):
                     points.append([col,row,slice])
     pca = PCA(n_components=1)
     return pca.fit_transform(np.array(points.T))
+
+"""
+Code For Computing Axis of Alignment Using Least Squares
+
+Input: 3D Numpy Array (sitk image in numpy array format)
+Output: 3D Vector (First PCA Component)
+"""
+def align_axis_least_squares(data):
+
+    points = []
+    for slice in range(len(data)):
+        for row in range(len(data[0])):
+            for col in range(data[0][0]):
+                if data[slice][row][col] != 0:
+                    points.append([col, row, slice])
+    pca = PCA(n_components=1)
+    return pca.fit_transform(np.array(points.T))
+
