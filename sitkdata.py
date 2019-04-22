@@ -58,6 +58,50 @@ def write_img(image, path):
     """
     sitk.WriteImage(image, path)
 
+
+'''
+Returns a 2d array of the specified slice
+:param data: 3d array of image values
+:param low: lower bounds of image (inclusive)
+:param high: higher bounds of image (exclusive)
+:param cs: cross section slice index
+:param direction: 0 = x direction, 1 = y direction, 2 = z direction
+'''
+def get_slice(data, low, high, cs, direction):
+	if direction == 0:
+		getter = lambda i, j: get_value3d(data, cs, i, j)
+		idir = 1
+		jdir = 2
+	elif direction == 1:
+		getter = lambda i, j: get_value3d(data, i, cs, j)
+		idir = 0
+		jdir = 2
+	else:
+		getter = lambda i, j: get_value3d(data, i, j, cs)
+		idir = 0
+		jdir = 1
+	ilen = high[idir] - low[idir]
+	jlen = high[jdir] - low[jdir]
+	d2 = get_empty2d(ilen, jlen)
+
+	for i in range(ilen):
+		for j in range(jlen):
+			set_value2d(d2, i, j, getter(i + low[idir], j + low[jdir]))
+	return d2
+
+
+'''
+Returns trimmed 3d box between low and high coordinates in data
+:param data: 3d array of values
+:param low: lower bounds (inclusive)
+:param high: higher bounds (exclusive)
+'''
+def get_box(data, low, high):
+	return data[low[2]:high[2], low[1]:high[1], low[0]:high[0]]
+
+
+    
+
 def point_mask_3d(data, points):
 	xlim, ylim, zlim = get_size(data)
 	data = copy(data)
