@@ -1,20 +1,50 @@
 import SimpleITK as sitk
 import numpy as np
+from sitkdata import *
+
+'''
+Brief overview of the file:
+
+*Read doc for functions before using them
+*Helper functions at the bottom are useful (eg convert image to 3darray, etc)
+**This is especially helpful since sitk indexing is (z, y, x), so this abstracts that away
+*"data" param generally refers to an array as opposed to an image
+*I implemented a parameter system to a basic degree (similar to sitk's parameters).
+	If you aren't sure about which one to use, just pass in an empty dictionary.
+	This defaults to the most naive approach, which will take longer but has the
+	least implicit assumptions.
+	**The main parameter you might wanna change is "checker". As of now, safe_find
+		defaults to params["checker"] = lambda x: x > 0.
+		This is used to determine if we are looking at a said pixel (aka part of image)
+		or not. So for example, you might want to set a threshold, 
+		or perhaps a specific value if looking 
 
 
 
-def main(inpath):
-	inimage = read_img(inpath)
-	data = img_to_data(inimage)
-
-	params = {}
-
-	smoothed_data = smoothing(data, average_kernel)
-	low, high = find_bounding_box(smoothed_data, params)
-	cs, area, direction = bounding_box_to_largest_area(smoothed_data, low, high, params)
-	slc = get_slice(low, high, cs, direction)
+'''
 
 
+
+
+'''
+Function to implement some workflow, still not fully implemented.
+Could be useful to see how things are called.
+:param inpath: Image file to read in
+:param outpath: Place to save output slice
+:ptype inpath: string
+:ptype outpath: string
+'''
+def main(inpath, outpath):
+	pass
+
+
+
+'''
+Applies the given kernel function to every voxel in data
+:param data: 3d array of image values
+:param kernel: lambda function (data, x, y, z) -> value
+
+'''
 def smoothing(data, kernel):
 	xlen, ylen, zlen = get_shape(data)
 	outdata = get_empty3d(xlen, ylen, zlen)
@@ -25,6 +55,15 @@ def smoothing(data, kernel):
 
 	return outdata
 
+
+'''
+A basic kernel function to average values in an image
+:param data: 3d array of image values
+:param x: x coordinate
+:param y: y coordinate
+:param z: z coordinate
+:returns: 3d array of image values with kernel applied
+'''
 def average_kernel(data, x, y, z):
 	points = set()
 	xlen, ylen, zlen = get_shape(data)
@@ -36,6 +75,14 @@ def average_kernel(data, x, y, z):
 		return 0
 	return sum([get_value3d(data, i, j, k) for i, j, k in points]) / len(set)
 
+
+'''
+Checks if image is contiguous.
+As of now only naive implementation, so will take a long time to run.
+Set parameter "contiguous" to specify method of computation
+:param data: 3d array of image values
+:param params: dictionary specifying methods
+'''
 def check_contiguous(data, params):
 	method = safe_find(params, "contiguous")
 	if method is "naive":
@@ -43,7 +90,17 @@ def check_contiguous(data, params):
 
 
 
-	#inclusive beginning and exclusive end
+'''
+Finds a bounding box around all voxels such that checker(value) == true
+"checker" defaults to lambda value: value > 0
+Bounds are beginning inclusive and end exclusive
+Change "bb_method" parameter to change implementation. Default is naive
+	-"naive": Checks every pixel 
+	-"truncate": Stops checking internal values once extremes are reached. Basically a generic, slightly optimized approach
+	-"outsidein": Starts from outer layer and works inward until hits the image. Good for large images
+:param data: 3d array of image values
+:param params: dictionary of parameters
+'''
 def find_bounding_box(data, params):
 	method = safe_find(params, "bb_method")
 
@@ -57,7 +114,25 @@ def find_bounding_box(data, params):
 	elif method == "outsidein":
 		return _find_bounding_box_outsidein(data, params)
 
-#Helper for "find_bounding_box"
+'''
+Namely just a helper function for find_bounding_box. Not designed to be used outside of it.
+Default uses "checker" value of lambda value: value > 0
+
+"plane_detect" parameter values:
+*"fast_naive": Just gets true or false naively as fast as possible
+*"full_naive": (Default) Naive approach to get true/false and also plane boundaries (in i,j coords)
+*Convex ones assume along axis k, -1*area(slice_k) is convex
+**"fast_convex" is fast_naive with convex assumption
+**"full_convex" is full_naive with convex assumption 
+
+
+:param getter: lambda i, j: value at (i, j)
+:param ilen: length in i direction
+:param jlen: length in j direction
+:param params: dictionary of parameters
+
+
+'''
 def plane_detect(getter, ilen, jlen, params):
 	method = safe_find(params, "plane_detect")
 	#untested
@@ -73,9 +148,18 @@ def plane_detect(getter, ilen, jlen, params):
 		pass
 
 '''
+Finds the largest slice along the longest axis of 3d array
 ASSUMPTION: Principal axis parallel to longest bounding box axis.
 Other principal axes also parallel to bounding box axes.
 Contiguous assumptions as well, at least for convexity
+Default "checker" is lambda value: value > 0
+Parameter "bb_to_las":
+*"naive": Naive appraoach
+*"convex": Assumes -area(slicek) is convex in function of k
+:param data: 3d array of image values
+:param low: lower bounds of data (inclusive)
+:param high: higher bounds of data (exclusive)
+:param params: dicitonary of parameter values
 '''
 def bounding_box_to_largest_area(data, low, high, params):
 	xlen = high[0] - low[0]
@@ -129,33 +213,14 @@ def plane_area(getter, cs, ilen, jlen, params):
 		return _plane_area_naive(getter, cs, ilen, jlen, params)
 
 
-def get_slice(data, low, high, cs, direction):
-	if direction == 0:
-		getter = lambda i, j: get_value3d(data, cs, i, j)
-		idir = 1
-		jdir = 2
-	elif direction == 1:
-		getter = lambda i, j: get_value3d(data, i, cs, j)
-		idir = 0
-		jdir = 2
-	else:
-		getter = lambda i, j: get_value3d(data, i, j, cs)
-		idir = 0
-		jdir = 1
-	ilen = high[idir] - low[idir]
-	jlen = high[jdir] - low[jdir]
-	d2 = get_empty2d(ilen, jlen)
-
-	for i in range(ilen):
-		for j in range(jlen):
-			set_value2d(d2, i, j, getter(i + low[idir], j + low[jdir]))
-	return d2
-
-def get_box(data, low, high):
-	return data[low[2]:high[2], low[1]:high[1], low[0]:high[0]]
-
-
-def largest_area_slice_to_perimeter_points(slc, params):
+'''
+Gets a set of points in the given 2d slice that constitute the perimeter
+Default "checker" is lambda value: value > 0
+:param slc: 2d array of image slice values
+:param params: dictionary of parameter values
+:returns: set of points in 2d plane
+'''
+def slice_to_perimeter_points(slc, params):
 	flat_points = set()
 	shape = get_size(slc)
 
@@ -188,111 +253,40 @@ def largest_area_slice_to_perimeter_points(slc, params):
 	return flat_points
 
 
-
+'''
+Samples a set of points based on given set of points
+:param data: slice
+'''
 def perimeter_points_to_sampled(data, flat_points, params):
 	method = safe_find(params, "pp_to_samp")
 	if method == "naive":
-		return _perimeter_points_to_sampled_naive(data, flat_points, params)
+		return _points_to_sampled_naive(flat_points, params)
 
 
-def fp_to_3d(cs, direction, flat_points):
+'''
+Needs fixing, but not essential
+
+def fp_to_3d(cs, direction, points):
 	points = set()
 	if direction == 0:
-		for fp in flat_points:
+		for fp in slice_points:
 			points.add((cs, fp[0], fp[1]))
 	elif direction == 1:
-		for fp in flat_points:
+		for fp in slice_points:
 			points.add((fp[0], cs, fp[1]))
 	elif direction == 2:
 		for fp in flat_points:
 			points.add((fp[0], fp[1], cs))
 	return points
 
-
-def point_mask_3d(data, points):
-	xlim, ylim, zlim = get_size(data)
-	data = copy(data)
-	for x in range(xlim):
-		for y in range(ylim):
-			for z in range(zlim):
-				if (x, y, z) not in points:
-					set_value3d(data, x, y, z, 0)
-	return data
-
-def point_mask_2d(data, flat_points):
-	ilim, jlim = get_size(data)
-	data = copy(data)
-	for i in range(ilim):
-		for j in range(jlim):
-			if (i, j) not in flat_points:
-				set_value2d(data, i, j, 0)
-	return data
-
-
-'''
-Helper functions
 '''
 
 
-def get_value3d(data, x, y, z):
-	return data[z, y, x]
-
-def get_value2d(data, i, j):
-	return data[j, i]
-
-def set_value3d(data, x, y, z, value):
-	data[z, y, x] = value
-
-def set_value2d(data, i, j, value):
-	data[j, i] = value
-	
-def get_size(data):
-	shape = data.shape
-	return shape[::-1]
-
-def get_empty2d(ilen, jlen):
-	return np.zeros((jlen, ilen))
-
-def get_empty3d(xlen, ylen, zlen):
-	return np.zeros((zlen, ylen, xlen))
-
-def copy(data):
-	return np.copy(data)
-
-def data_to_img(data):
-	return sitk.GetImageFromArray(data)
-
-def img_to_data(img):
-	return sitk.GetArrayFromImage(img)
-
-
-def read_img(path, ultrasound=True):
-    """Load image from filepath as SimpleITK.Image
-
-    :param path: Path to .nii file containing image.
-    :param ultrasound_slice: Optional. If True, image will be cast as sitkUInt16 for ultrasound images.
-    :type path: str
-    :returns: Image object from path
-    :rtype: SimpleITK.Image
-    """
-    image = sitk.ReadImage(path)
-    if ultrasound:
-        image = sitk.Cast(image, sitk.sitkUInt16)
-    return image
-
-
-def write_img(image, path):
-    """Write an image to file
-
-    :param image: Image to be written
-    :param path: Destination where image will be written to
-    :type image: SimpleITK.Image
-    :type path: str
-    :rtype: None
-    """
-    sitk.WriteImage(image, path)
-
-
+'''
+A "safe" way to retrieve dictionary values. If key is not found, returns a default
+:param d: dictionary
+:param key: dictionary key
+'''
 def safe_find(d, key):
 	if d is None or key in d:
 		return d[key]
@@ -317,7 +311,7 @@ def safe_find(d, key):
 
 
 '''
-Specialized Methods
+Specialized Methods. DON'T call these directly
 '''
 
 
@@ -578,7 +572,7 @@ def _plane_area_naive(getter, cs, ilen, jlen, params):
 	return area
 
 
-def _perimeter_points_to_sampled_naive(data, params):
+def _points_to_sampled_naive(points, params):
 	n = safe_find(params, "n")
 	samples = set()
 	fp = set(flat_points)
