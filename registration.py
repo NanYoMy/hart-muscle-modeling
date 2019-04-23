@@ -32,6 +32,7 @@ def main():
     segmented_image = transform(segmented_image, generate_affine_transform(segmented_image, A, t), verbose)
 
 
+
     new_segmentation, transform_parameter_maps = segment(unsegmented_image, segmented_image, segmentation, get_param_maps(), verbose)
     write_file(new_segmentation, image_out)
     if len(parameter_file_out) > 0:
@@ -67,9 +68,9 @@ def read_file(filename, ultrasound=True):
     :returns: Image
     :rtype: SimpleITK.Image
     """
-    img = sitk.ReadImage(path)
+    img = sitk.ReadImage(filename)
     if ultrasound:
-        img = sitk.cast(img, sitk.sitkUInt16)
+        img = sitk.Cast(img, sitk.sitkUInt16)
     return img
 
 def write_file(img, filename):
@@ -90,7 +91,7 @@ def generate_affine_transform(img, A, t):
     :type t: numpy.ndarray
     :rtype: dict
     """
-    affine = _get_default_affine_transform()
+    affine = _get_default_affine()
 
     f = lambda x: tuple([str(i) for i in x])
     affine['Size'] = f(img.GetSize())
@@ -161,6 +162,8 @@ def register(fixed_image,
     for m in parameter_maps[1:]:
         registration_filter.AddParameterMap(m)
 
+    
+    registration_filter.Execute()
     transform_parameter_maps = registration_filter.GetTransformParameterMap()
 
     return transform_parameter_maps
