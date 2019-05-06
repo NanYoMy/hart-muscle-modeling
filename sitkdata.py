@@ -1,26 +1,23 @@
 
 
-def get_value3d(data, x, y, z):
-	return data[z, y, x]
 
-def get_value2d(data, i, j):
-	return data[j, i]
+def get_value(data, *args):
+	if type(args[0]) == type([]) or type(args[0]) == type(()):
+		return data[tuple(args[0][::-1])]
+	return data[tuple(args[::-1])]
 
-def set_value3d(data, x, y, z, value):
-	data[z, y, x] = value
+def set_value(data, value, *args):
+	if type(args[0]) == type([]) or type(args[0]) == type(()):
+		data[tuple(args[0][::-1])] = value
+	else:
+		data[tuple(args[::-1])] = value
 
-def set_value2d(data, i, j, value):
-	data[j, i] = value
-	
 def get_size(data):
 	shape = data.shape
-	return shape[::-1]
+	return shape[::-]
 
-def get_empty2d(ilen, jlen):
-	return np.zeros((jlen, ilen))
-
-def get_empty3d(xlen, ylen, zlen):
-	return np.zeros((zlen, ylen, xlen))
+def get_empty(*args):
+	return np.zeros(tuple(args))
 
 def copy(data):
 	return np.copy(data)

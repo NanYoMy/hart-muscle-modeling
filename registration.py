@@ -16,7 +16,6 @@ def main():
     segmented_image = read_file("", True)
     segmentation = read_file("", True)
     image_out = ""
-    parameter_file_out = ""
 
     #x' = Ax + t for affine transform
 
@@ -35,8 +34,7 @@ def main():
 
     new_segmentation, transform_parameter_maps = segment(unsegmented_image, segmented_image, segmentation, get_param_maps(), verbose)
     write_file(new_segmentation, image_out)
-    if len(parameter_file_out) > 0:
-        write_params(transform_parameter_maps, param_file_out)
+
 
 def transform(img, parameter_maps, verbose=False):
     """Transform an image according to some vector of parameter maps
@@ -91,7 +89,7 @@ def generate_affine_transform(img, A, t):
     :type t: numpy.ndarray
     :rtype: dict
     """
-    affine = _get_default_affine()
+    affine = _get_default_affine_transform()
 
     f = lambda x: tuple([str(i) for i in x])
     affine['Size'] = f(img.GetSize())
@@ -133,6 +131,11 @@ def segment(unsegmented_image,
     transform_parameter_maps = register(
         unsegmented_image, segmented_image, parameter_maps, verbose=verbose)
 
+    if type(transform_parameter_maps) == type({}):
+        transform_parameter_maps['ResampleInterpolator'] = ['FinalNearestNeighborInterpolator']
+    else:
+        for i in range(len(transform_parameter_maps)):
+            transform_parameter_maps[i]['ResampleInterpolator'] = ['FinalNearestNeighborInterpolator']
     return transform(
         segmentation, transform_parameter_maps, verbose=verbose), transform_parameter_maps
 
@@ -158,18 +161,25 @@ def register(fixed_image,
     registration_filter.SetFixedImage(fixed_image)
     registration_filter.SetMovingImage(moving_image)
 
+    if type(parameter_maps) == type({}):
+        parameter_maps['AutomaticTransformInitialization'] = ['true']
+    else:
+        for i in range(len(parameter_maps)):
+            parameter_maps[i]['AutomaticTransformInitialization'] = ['true']
+
     registration_filter.SetParameterMap(parameter_maps)
     for m in parameter_maps[1:]:
         registration_filter.AddParameterMap(m)
 
-    
+
     registration_filter.Execute()
+    result_image = registration_filter.GetResultImage()
     transform_parameter_maps = registration_filter.GetTransformParameterMap()
 
     return transform_parameter_maps
 
 
-def write_result(parameter_maps, parameter_file_out):
+def write_param(parameter_map, parameter_file_out):
     """Write single amsaf_eval result to path
 
     Writes parameter maps, segmentation, and score of AMSAF result as individual
@@ -181,13 +191,13 @@ def write_result(parameter_maps, parameter_file_out):
     :type path: str
     :rtype: None
     """
-    sitk.WriteParameterFile(parameter_maps, parameter_file_out)
+    sitk.WriteParameterFile(parameter_map, parameter_file_out)
 
 
 
 
 
-def _get_default_affine():
+def _get_default_affine_transform():
     affine = {
     'AutomaticScalesEstimation': ('True'),
     'CenterOfRotationPoint': ('0.0', '0.0', '0.0'), 

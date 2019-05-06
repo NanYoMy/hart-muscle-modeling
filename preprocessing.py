@@ -1,4 +1,4 @@
-import SimpleITK as sitk
+ import SimpleITK as sitk
 import numpy as np
 from sitkdata import *
 
@@ -47,11 +47,11 @@ Applies the given kernel function to every voxel in data
 '''
 def smoothing(data, kernel):
 	xlen, ylen, zlen = get_shape(data)
-	outdata = get_empty3d(xlen, ylen, zlen)
+	outdata = get_empty(xlen, ylen, zlen)
 	for x in range(xlen):
 		for y in range(ylen):
 			for z in range(zlen):
-				set_value3d(outdata, x, y, z, kernel(data, x, y, z))
+				set_value(outdata, kernel(data, x, y, z), x, y, z)
 
 	return outdata
 
@@ -73,7 +73,7 @@ def average_kernel(data, x, y, z):
 				points.add((i, j, k))
 	if len(set) == 0:
 		return 0
-	return sum([get_value3d(data, i, j, k) for i, j, k in points]) / len(set)
+	return sum([get_value(data, i, j, k) for i, j, k in points]) / len(set)
 
 
 '''
@@ -171,26 +171,26 @@ def bounding_box_to_largest_area(data, low, high, params):
 
 	if xlen > ylen:
 		if zlen > xlen: #zlen greatest
-			getter = lambda cs, i, j : get_value3d(data, low[0] + i, low[1] + j, low[2] + cs)
+			getter = lambda cs, i, j : get_value(data, low[0] + i, low[1] + j, low[2] + cs)
 			ilen = xlen
 			jlen = ylen
 			pclen = zlen
 			direction = 2
 		else: #xlen greatest
-			getter = lambda cs, i, j : get_value3d(data, low[0] + cs, low[1] + i, low[2] + j)
+			getter = lambda cs, i, j : get_value(data, low[0] + cs, low[1] + i, low[2] + j)
 			ilen = ylen
 			jlen = zlen
 			pclen = xlen
 			direction = 0
 	else:
 		if ylen > zlen: #ylen greatest
-			getter = lambda cs, i, j : get_value3d(data, low[0] + i, low[1] + cs, low[2] + j)
+			getter = lambda cs, i, j : get_value(data, low[0] + i, low[1] + cs, low[2] + j)
 			ilen = xlen
 			jlen = zlen
 			pclen = ylen
 			direction = 1
 		else: #zlen greatest
-			getter = lambda cs, i, j : get_value3d(data, low[0] + i, low[1] + j, low[2] + cs)
+			getter = lambda cs, i, j : get_value(data, low[0] + i, low[1] + j, low[2] + cs)
 			ilen = xlen
 			jlen = ylen
 			pclen = zlen
@@ -227,7 +227,7 @@ def slice_to_perimeter_points(slc, params):
 	checker = safe_find(params, "checker")
 
 	def perim(i0, j0):
-		if not checker(get_value2d(slc, i0, j0)):
+		if not checker(get_value(slc, i0, j0)):
 			return False
 		contact = False
 		checks = set()
@@ -242,7 +242,7 @@ def slice_to_perimeter_points(slc, params):
 
 		while not contact or len(checks) > 0:
 			i, j = checks.pop()
-			contact = contact or checker(get_value2d(slc, i, j))
+			contact = contact or checker(get_value(slc, i, j))
 		return contact
 
 	for i in range(shape[0]):
@@ -323,7 +323,7 @@ def _check_contiguous_naive(data, params):
 	for x in range(xlen):
 		for y in range(ylen):
 			for z in range(zlen):
-				if get_value3d(data, x, y, z) > 0:
+				if get_value(data, x, y, z) > 0:
 					start = (x, y, z)
 					break
 
@@ -335,13 +335,13 @@ def _check_contiguous_naive(data, params):
 			for y in range(max(0, point[1]-1, min(ylen, point[1] + 2))):
 				for z in range(max(0, point[2]-1, min(zlen, point[2] + 2))):
 					new_point = (x, y, z)
-					if new_point not in checked and get_value3d(data, x, y, z) > 0:
+					if new_point not in checked and get_value(data, x, y, z) > 0:
 						connected.add(new_point)
 
 	for x in range(xlen):
 		for y in range(ylen):
 			for z in range(zlen):
-				if (x, y, z) not in checked and get_value3d(data, x, y, z) > 0:
+				if (x, y, z) not in checked and get_value(data, x, y, z) > 0:
 					return False
 
 	return True
@@ -355,7 +355,7 @@ def _find_bounding_box_naive(data, params):
 	for x in range(xlim):
 		for y in range(ylim):
 			for z in range(zlim):
-				if checker(get_value3d(data, x, y, z)):
+				if checker(get_value(data, x, y, z)):
 					if found: 
 						xlow = min(x, xlow)
 						ylow = min(y, ylow)
@@ -383,19 +383,19 @@ def _find_bounding_box_truncate(data, params):
 		palen = xlim
 		ilen = ylim
 		jlen = zlim
-		getter = lambda i, j: get_value3d(data, cs, i, j)
+		getter = lambda i, j: get_value(data, cs, i, j)
 		reorder = lambda cs, i, j: (cs, i, j)
 	elif pa == 1:
 		palen = ylim
 		ilen = xlim
 		jlen = zlim
-		getter = lambda i, j: get_value3d(data, i, cs, j)
+		getter = lambda i, j: get_value(data, i, cs, j)
 		reorder = lambda cs, i, j: (i, cs, j)
 	elif pa == 2:
 		palen = zlim
 		ilen = xlim
 		jlen = ylim
-		getter = lambda i, j: get_value3d(data, i, j, cs)
+		getter = lambda i, j: get_value(data, i, j, cs)
 		reorder = lambda cs, i, j: (i, j, cs)
 
 	steps = range(palen) if orien == 0 else range(palen - 1 , -1, -1)
@@ -433,7 +433,7 @@ def _find_bounding_box_outsidein(data, params):
 	yhigh = ylim - 1
 	zhigh = zlim - 1
 
-	getter = lambda y, z: get_value3d(data, x, y, z)
+	getter = lambda y, z: get_value(data, x, y, z)
 
 	x = 0
 	found = False
@@ -449,7 +449,7 @@ def _find_bounding_box_outsidein(data, params):
 		x -- 1
 	xhigh = x
 
-	getter = lambda x, z: get_value3d(data, xlow + x, y, z)
+	getter = lambda x, z: get_value(data, xlow + x, y, z)
 	
 	y = 0
 	xlen = xhigh - xlow + 1
@@ -462,7 +462,7 @@ def _find_bounding_box_outsidein(data, params):
 		y -= 1
 	yhigh = y
 
-	getter = lambda x, y: get_value3d(data, x + xlow, y + ylow, z)
+	getter = lambda x, y: get_value(data, x + xlow, y + ylow, z)
 
 	y = 0
 	ylen = yhigh - ylow + 1
