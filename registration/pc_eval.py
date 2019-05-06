@@ -114,24 +114,17 @@ def amsaf_eval(unsegmented_image,
             segmentation,
             parameter_map,
             verbose=verbose)
-        if ground_truth is not None:
-            score = _sim_score(seg, ground_truth)
-        else:
-            score = 0
-        return [parameter_map, seg, score]
+
+        return [parameter_map, seg]
 
     def param_combinations(option_dict, transform_type):
         return (_to_elastix(pm, transform_type)
                 for pm in ParameterGrid(option_dict))
 
-    if not parameter_priors:
-        parameter_priors = _get_default_vector()
-
-    else:
-        for rpm in param_combinations(parameter_priors[0], 'rigid'):
-            for apm in param_combinations(parameter_priors[1], 'affine'):
-                for bpm in param_combinations(parameter_priors[2], 'bspline'):
-                    yield eval_pm([rpm, apm, bpm])
+    for rpm in param_combinations(parameter_priors[0], 'rigid'):
+        for apm in param_combinations(parameter_priors[1], 'affine'):
+            for bpm in param_combinations(parameter_priors[2], 'bspline'):
+                yield eval_pm([rpm, apm, bpm])
                     
 
 
@@ -306,40 +299,6 @@ def top_k(k, amsaf_results):
     if k == 0:
         sorted(amsaf_results, key=lambda x: x[-1], reverse=True)
     return sorted(amsaf_results, key=lambda x: x[-1], reverse=True)[:k]
-
-
-def init_affine_transform(img, transform, center=None):
-    """Initializes an affine transform parameter map for a given image.
-
-    The transform fits the following format: T(x) = A(x-c) + c + t
-
-    :param img: Image to be transformed
-    :param transform: 4x3 numpy array consisting of affine matrix and a translational vector
-    :param center: Center of rotation. If none given, geometric center is used
-    :type img: SimpleITK.Image
-    :type transform: numpy.ndarray
-    :type center: (int, int, int)
-    :rtype: dict
-    """
-    affine = _get_default_affine_transform()
-
-    f = lambda x: tuple([str(i) for i in x])
-    affine['Size'] = f(img.GetSize())
-    affine['Spacing'] = f(img.GetSpacing())
-    affine['Origin'] = f(img.GetOrigin())
-    affine['Direction'] = f(img.GetDirection())
-    
-
-    if center == "origin":
-        affine['CenterOfRotationPoint'] = affine['Origin']
-    elif center:
-        affine['CenterOfRotationPoint'] = f(center)
-    else:
-        offset = [.5*x*y for x, y in zip(img.GetSize(), img.GetSpacing())]
-        affine['CenterOfRotationPoint'] = f([x + y for x, y in zip(offset, img.GetOrigin())])
-
-    affine['TransformParameters'] = f(transform.ravel())
-    return affine
 
 
 
