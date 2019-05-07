@@ -1,5 +1,3 @@
- import SimpleITK as sitk
-import numpy as np
 from sitkdata import *
 
 '''
@@ -25,20 +23,6 @@ Brief overview of the file:
 
 
 
-
-'''
-Function to implement some workflow, still not fully implemented.
-Could be useful to see how things are called.
-:param inpath: Image file to read in
-:param outpath: Place to save output slice
-:ptype inpath: string
-:ptype outpath: string
-'''
-def main(inpath, outpath):
-	pass
-
-
-
 '''
 Applies the given kernel function to every voxel in data
 :param data: 3d array of image values
@@ -46,7 +30,7 @@ Applies the given kernel function to every voxel in data
 
 '''
 def smoothing(data, kernel):
-	xlen, ylen, zlen = get_shape(data)
+	xlen, ylen, zlen = get_size(data)
 	outdata = get_empty(xlen, ylen, zlen)
 	for x in range(xlen):
 		for y in range(ylen):
@@ -66,14 +50,14 @@ A basic kernel function to average values in an image
 '''
 def average_kernel(data, x, y, z):
 	points = set()
-	xlen, ylen, zlen = get_shape(data)
+	xlen, ylen, zlen = get_size(data)
 	for i in range(max(x-1, 0), min(x+2, xlen)):
 		for j in range(max(y-1, 0), min(y+2, ylen)):
 			for k in range(max(z-1, 0), min(z+2, zlen)):
 				points.add((i, j, k))
-	if len(set) == 0:
+	if len(points) == 0:
 		return 0
-	return sum([get_value(data, i, j, k) for i, j, k in points]) / len(set)
+	return sum([get_value(data, i, j, k) for i, j, k in points]) / len(points)
 
 
 '''
@@ -309,6 +293,25 @@ def safe_find(d, key):
 	if key == "contiguous":
 		return "naive"
 
+'''
+A way of gathering all possible keys of a params dictionary
+
+'''
+def safe_keys():
+	return _DEFAULT_PARAM_KEYS
+
+_DEFAULT_PARAM_KEYS = [
+	"bb_method",
+	"bb_params",
+	"plane_detect",
+	"bb_to_las",
+	"plane_area",
+	"pp_to_samp",
+	"n",
+	"checker",
+	"contiguous"]
+
+
 
 '''
 Specialized Methods. DON'T call these directly
@@ -376,7 +379,7 @@ def _find_bounding_box_naive(data, params):
 
 
 def _find_bounding_box_truncate(data, params):
-	xlim, ylim, zlim = get_shape(data)
+	xlim, ylim, zlim = get_size(data)
 	checker = safe_find(params, "checker")
 	pa, orien = safe_find(params, "bb_params")
 	if pa == 0:
@@ -426,7 +429,7 @@ def _find_bounding_box_truncate(data, params):
 	return (0, 0, 0), (0, 0, 0)
 
 def _find_bounding_box_outsidein(data, params):
-	xlim, ylim, zlim = get_shape(data)
+	xlim, ylim, zlim = get_size(data)
 	checker = safe_find(params, "checker")
 	xlow = ylow = zlow = 0
 	xhigh = xlim - 1

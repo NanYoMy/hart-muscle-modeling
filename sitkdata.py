@@ -1,4 +1,5 @@
-
+import SimpleITK as sitk
+import numpy as np
 
 
 def get_value(data, *args):
@@ -14,10 +15,10 @@ def set_value(data, value, *args):
 
 def get_size(data):
 	shape = data.shape
-	return shape[::-]
+	return shape[::-1]
 
 def get_empty(*args):
-	return np.zeros(tuple(args))
+	return np.zeros(tuple(args[::-1]))
 
 def copy(data):
 	return np.copy(data)
