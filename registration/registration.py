@@ -9,11 +9,9 @@ def run_amsaf():
     EDIT THESE VARIABLES
     '''
     verbose = True
-    dirB = "/Users/chris/Desktop/HART/ultrasound_data/SubB/"
-    dirC = "/Users/chris/Desktop/HART/ultrasound_data/SubC/"
-    unsegmented_image = read_image("/Users/chris/Desktop/HART/ultrasound_data/SubC/trial6_30_fs_volume.nii")
-    segmented_image = read_image("/Users/chris/Desktop/HART/ultrasound_data/SubB/trial6_30_fs_volume.nii")
-    segmentation = read_image("/Users/chris/Desktop/HART/ultrasound_data/SubB/trial6_30_fs_seg.nii")
+    unsegmented_image = read_image("")
+    segmented_image = read_image("")
+    segmentation = read_image("")
     new_segmentation = "test_seg.nii"
 
 
