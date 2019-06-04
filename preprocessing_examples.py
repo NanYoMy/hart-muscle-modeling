@@ -49,14 +49,13 @@ def examples(filename, outpath="example_results"):
 
 	smoothed = data
 	for _ in range(k):
-		smoothed = preprocessing.smoothing(smoothed, preprocessing.average_kernel)
-
+	#	smoothed = preprocessing.smoothing(smoothed, preprocessing.average_kernel)
+	
 	print("Done! " + str(time.time() - start) + " seconds since beginning.")
 	print()
 
 	print("Saving smoothed image... " )
 
-	sitkdata.write_img(sitk.data_to_image(smoothed), os.path.join(outpath, "smoothed.nii"))
 
 	print("Done!")
 	print()

@@ -372,7 +372,7 @@ def _find_bounding_box_naive(data, params):
 						ylow = yhigh = y
 						zlow = zhigh = z
 	if found:
-		return (xlow, ylow, zlow), (xhigh, yhigh, zhigh)
+		return (xlow, ylow, zlow), (xhigh + 1, yhigh + 1, zhigh + 1)
 	else:
 		return (0, 0, 0), (0, 0, 0)
 
