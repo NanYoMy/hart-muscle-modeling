@@ -67,7 +67,7 @@ Set parameter "contiguous" to specify method of computation
 :param data: 3d array of image values
 :param params: dictionary specifying methods
 '''
-def check_contiguous(data, params):
+def check_contiguous(data, params={}):
 	method = safe_find(params, "contiguous")
 	if method is "naive":
 		return _check_contiguous_naive(data, params)
@@ -85,7 +85,7 @@ Change "bb_method" parameter to change implementation. Default is naive
 :param data: 3d array of image values
 :param params: dictionary of parameters
 '''
-def find_bounding_box(data, params):
+def find_bounding_box(data, params={}):
 	method = safe_find(params, "bb_method")
 
 	#untested
@@ -117,7 +117,7 @@ Default uses "checker" value of lambda value: value > 0
 
 
 '''
-def plane_detect(getter, ilen, jlen, params):
+def plane_detect(getter, ilen, jlen, params={}):
 	method = safe_find(params, "plane_detect")
 	#untested
 	if method == "fast_naive":	
@@ -145,7 +145,7 @@ Parameter "bb_to_las":
 :param high: higher bounds of data (exclusive)
 :param params: dicitonary of parameter values
 '''
-def bounding_box_to_largest_area(data, low, high, params):
+def bounding_box_to_largest_area(data, low, high, params={}):
 	xlen = high[0] - low[0]
 	ylen = high[1] - low[1]
 	zlen = high[2] - low[2]
@@ -190,7 +190,7 @@ def bounding_box_to_largest_area(data, low, high, params):
 
 
 #Helper for "bounding_box_to_largest_area" "convex" setting
-def plane_area(getter, cs, ilen, jlen, params):
+def plane_area(getter, cs, ilen, jlen, params={}):
 	method = safe_find(params, "plane_area")
 	checker = safe_find(params, "checker")
 	if method == "naive":
@@ -204,7 +204,7 @@ Default "checker" is lambda value: value > 0
 :param params: dictionary of parameter values
 :returns: set of points in 2d plane
 '''
-def slice_to_perimeter_points(slc, params):
+def slice_to_perimeter_points(slc, params={}):
 	flat_points = set()
 	shape = get_size(slc)
 
@@ -241,7 +241,7 @@ def slice_to_perimeter_points(slc, params):
 Samples a set of points based on given set of points
 :param data: slice
 '''
-def perimeter_points_to_sampled(data, flat_points, params):
+def perimeter_points_to_sampled(data, flat_points, params={}):
 	method = safe_find(params, "pp_to_samp")
 	if method == "naive":
 		return _points_to_sampled_naive(flat_points, params)
@@ -318,7 +318,7 @@ Specialized Methods. DON'T call these directly
 '''
 
 
-def _check_contiguous_naive(data, params):
+def _check_contiguous_naive(data, params={}):
 	xlen, ylen, zlen = get_size(data)
 	filled = set()
 	connected = set()
@@ -351,7 +351,7 @@ def _check_contiguous_naive(data, params):
 
 
 
-def _find_bounding_box_naive(data, params):
+def _find_bounding_box_naive(data, params={}):
 	xlim, ylim, zlim = get_size(data)
 	checker = safe_find(params, "checker")
 	found = False
@@ -378,7 +378,7 @@ def _find_bounding_box_naive(data, params):
 
 
 
-def _find_bounding_box_truncate(data, params):
+def _find_bounding_box_truncate(data, params={}):
 	xlim, ylim, zlim = get_size(data)
 	checker = safe_find(params, "checker")
 	pa, orien = safe_find(params, "bb_params")
@@ -428,7 +428,7 @@ def _find_bounding_box_truncate(data, params):
 		return reorder(cslow, ilow, jlow), reorder(cshigh + 1, ihigh + 1, jhigh + 1)
 	return (0, 0, 0), (0, 0, 0)
 
-def _find_bounding_box_outsidein(data, params):
+def _find_bounding_box_outsidein(data, params={}):
 	xlim, ylim, zlim = get_size(data)
 	checker = safe_find(params, "checker")
 	xlow = ylow = zlow = 0
@@ -480,7 +480,7 @@ def _find_bounding_box_outsidein(data, params):
 	return (xlow, xhigh + 1), (ylow, yhigh + 1), (zlow, zhigh + 1)	
 
 
-def _plane_detect_fast_naive(getter, ilen, jlen, params):
+def _plane_detect_fast_naive(getter, ilen, jlen, params={}):
 	checker = safe_find(params, "checker")
 	for i in range(ilen):
 		for j in range(jlen):
@@ -488,7 +488,7 @@ def _plane_detect_fast_naive(getter, ilen, jlen, params):
 				return True
 		return False
 
-def _plane_detect_full_naive(getter, ilen, jlen, params):
+def _plane_detect_full_naive(getter, ilen, jlen, params={}):
 		checker = safe_find(params, "checker")
 		found = False
 		for i in range(ilen):
@@ -508,7 +508,7 @@ def _plane_detect_full_naive(getter, ilen, jlen, params):
 		else:
 			return found, (0, 0), (0, 0)
 
-def _plane_detect_fast_convex(getter, ilen, jlen, params):
+def _plane_detect_fast_convex(getter, ilen, jlen, params={}):
 	checker = safe_find(params, "checker")
 	def line_detect(i):
 			for j in len(jlen):
@@ -542,7 +542,7 @@ def _bounding_box_to_largest_area_naive(low, checker, getter, ilen, jlen, pclen,
 				areas[cs] += checker(getter(cs, i, j) )
 	return low[direction] + areas.index(max(areas)), max(areas), direction
 
-def _bounding_box_to_largest_area_convex(getter, pclen, ilen, jlen, params):
+def _bounding_box_to_largest_area_convex(getter, pclen, ilen, jlen, params={}):
 	cslow = 0
 	cshigh = pclen - 1
 	alow = plane_area(getter, cslow, ilen, jlen, params)
@@ -567,7 +567,7 @@ def _bounding_box_to_largest_area_convex(getter, pclen, ilen, jlen, params):
 
 	return csmid, amid, direction
 
-def _plane_area_naive(getter, cs, ilen, jlen, params):
+def _plane_area_naive(getter, cs, ilen, jlen, params={}):
 	area = 0
 	for i in range(ilen):
 		for j in range(jlen):
@@ -575,7 +575,7 @@ def _plane_area_naive(getter, cs, ilen, jlen, params):
 	return area
 
 
-def _points_to_sampled_naive(points, params):
+def _points_to_sampled_naive(points, params={}):
 	n = safe_find(params, "n")
 	samples = set()
 	fp = set(flat_points)
