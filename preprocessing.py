@@ -259,7 +259,7 @@ A "safe" way to retrieve dictionary values. If key is not found, returns a defau
 :param key: dictionary key
 '''
 def safe_find(d, key):
-	if d == {} or key in d:
+	if key in d:
 		if key == "n_samples":
 			return int(d[key])
 		if key == "is_filled":
