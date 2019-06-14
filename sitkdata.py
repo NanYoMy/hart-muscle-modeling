@@ -2,34 +2,73 @@ import SimpleITK as sitk
 import numpy as np
 
 
+'''
+Gets the value at a given pixel/voxel of the image data
+@param data The "data" form of the image (use img_to_data)
+@param args The coordinates. This allows for both 2D and 3D images to call the same function
+'''
 def get_value(data, *args):
 	if type(args[0]) == type([]) or type(args[0]) == type(()):
 		return data[tuple(args[0][::-1])]
 	return data[tuple(args[::-1])]
 
-def set_value(data, value, *args):
+'''
+Sets the value at a given pixel/voxel of the image data
+@param data The "data" form of the image (use img_to_data)
+@param args The coordinates, followed by the value you wish to use. 
+This allows for both 2D and 3D images to call the same function
+'''
+def set_value(data, *args):
+	value = args.pop()
 	if type(args[0]) == type([]) or type(args[0]) == type(()):
 		data[tuple(args[0][::-1])] = value
 	else:
 		data[tuple(args[::-1])] = value
 
+'''
+Returns the dimensions of an image, whether 2D or 3D
+@param data The "data" from of an image (use img_to_data)
+'''
 def get_size(data):
 	shape = data.shape
 	return shape[::-1]
 
+'''
+Returns an image with all zeros of the specified dimensions
+@param args The specified dimensions
+'''
 def get_empty(*args):
+	if type(args[0]) == type([]) or type(args[0]) == type(()):
+		return np.zeros(tuple(args[0][::-1]))
 	return np.zeros(tuple(args[::-1]))
 
+'''
+Creates a copy of image data
+@param data The image data to be copied (use img_to_data)
+'''
 def copy(data):
 	return np.copy(data)
 
+"""
+Converts image data into an SITK image that can be written
+@param data The image data
+"""
 def data_to_img(data):
 	return sitk.GetImageFromArray(data)
 
+'''
+Converts an SITK image into image data that can be easily manipulated
+@param img The SITK image
+'''
 def img_to_data(img):
 	return sitk.GetArrayFromImage(img)
 
 
+"""
+Reads in an image file
+@param path The image file location
+@param ultrasound If true, an extra casting is performed. This is needed for reading in ultrasound data. Default is True
+"""
 def read_img(path, ultrasound=True):
     """Load image from filepath as SimpleITK.Image
 
@@ -44,7 +83,11 @@ def read_img(path, ultrasound=True):
         image = sitk.Cast(image, sitk.sitkUInt16)
     return image
 
-
+"""
+Writes an image
+@param image SITK image to be written
+@param path Location to save SITK image
+"""
 def write_img(image, path):
     """Write an image to file
 

@@ -99,8 +99,51 @@ Registration Preprocessing
 				Just use the gathered points and pick somehow. Not hard to do, but sampling method might matter.
 
 Preprocessing Parameters
-	In order to ensure functionality, the first priority should be getting some form of preprocessing working. However, ultimately the naive implementation would be too slow to be used practically. For this, a parameter dictionary system is implemented to allow one to choose between various function options.
+	In order to ensure functionality, the first priority should be getting some form of preprocessing working. However, ultimately the naive implementation would be too slow to be used practically. For this, a parameter dictionary system is implemented to allow one to choose between various function options. Using a "safe_find" function allows the default choice to be used if one isn't sure what option to pick
 
+	NOTE: Majority of these methods are still being debugged/aren't tested, so the naive (but slow) approach may be the most accurate. So, if you are unsure of what to do, just don't pass in anything (same as using an empty dictionary, so goes to default)
+
+	Parameters:
+
+		"bounding_box_method": The method determining how to find a bounding box around an image using the function "find_bounding_box"
+			Default: "naive": Checks every voxel
+			"truncate": Assuming contiguity, tries to end early once it "passes" the scan in space. Direction of approach can be changed with "bounding_box_parameters"
+			"outsidein": Assuming contiguity, starts from the outside layers and works inward until each side "touches" the image. Good for scans that take up majority of the image space
+			Possible other options not yet implemented:
+				"insideout": Opposite of "outsidein". Assumes contiguity
+
+		"bounding_box_parameters": A length 2 tuple determining the principal axis (x == 0, y == 1, z == 2) followed by the orientation (low to high == 0, high to low == 1) specifying the direction for the "truncate" option for "bounding_box_method" for the function "find_bounding_box"
+			Default: (0, 0)
+
+		"plane_detect": The function "find_bounding_box" with params "truncate" and "outsidein" call the helper function "plane_detect", which checks the parameter "plane_detect" to determine how to work. This function determines if there is a scan value in the specified plane, and depending on the parameters returns the bounds of the scan (assuming contiguity)
+			Default: "fast_naive": Checks every pixel and just returns true or false
+			"full_naive": Checks every pixel and returns true or false along with bounds on the scan in that plane
+			"fast_convex": Mimicking binary search, this function assumes that a function of the sum of the scan values in each line is negatively convex, and uses this to perform binary search like jumps iteratively until the boundary is found
+			"full_convex": Not yet implemented, but would be "fast_convex" but returning the scan bounds as well
+
+		"bounding_box_to_largest_area_slice": Parameter determining the approach of the "bounding_box_to_largest_area" function
+			Default: "naive": Naive approach, so checks every slice and finds area
+			"convex": Assumes a function mapping slice index to area of slice is negatively convex and uses this to perform a modified binary search for the largest area slice
+
+		"plane_area": Parameter determining apprach of the "bounding_box_to_largest_area" function when using the "bounding_box_to_largest_area_slice" setting "convex"
+			Default: "naive": Just checks every pixel
+
+		"perimeter_points_to_samples": Takes a set of coordinates in a cross section plane and returns a set of sampled points. 
+			Default: "naive": Samples randomly a set amount of points
+
+		"n_samples": A parameter used by "perimeter_points_to_samples". For methods of sampling that define a set amount of samples, this value is used. Make sure to pass in a string of the integer value. safe_find casts as an integer before passing out
+			Default: "10"
+
+		"is_filled": Probably the most important parameter. This function determines whether a given value is actually part of the scan or not. This parameter should be inputted as a boolena expression based in "x" (e.g. "x > 0"), which then becomes `lambda x: x > 0`, with the value of the pixel/voxel being passed in. To use other information, such as adjacent values, this would need to be modified (possibly precompute which pixels/voxels are part of the image and just use this function to reference it). Be aware that this function could easily be used to highjack the code, so this should be modified to use preset options at some point in the future. Note also that "safe_find" returns the lambda function, while the dictionary should store the boolean expression
+			Default: "x > 0" -> `lambda x : x > 0`
+
+
+Default Dictionary:
+	Currently the best default dictionary is to specify no parameters beyond the "is_filled" one. Update this as time goes on for a good go-to approach for this
+
+	{
+		"is_filled" : "x > 100"
+	}
 
 
 

@@ -28,7 +28,7 @@ def examples(filename, outpath="example_results"):
 	test_val = sitkdata.get_value(data, test_coord)
 	print("Value at test_coord " + str(test_coord) + ": " + str(test_val))
 
-	sitkdata.set_value(data, 255 - test_val, test_coord)
+	sitkdata.set_value(data, test_coord, 255 - test_val)
 	print("New value at test_coord " + str(test_coord) + ": " + str(255 - test_val))
 	print()
 

@@ -11,8 +11,8 @@ Brief overview of the file:
 	If you aren't sure about which one to use, just pass in an empty dictionary.
 	This defaults to the most naive approach, which will take longer but has the
 	least implicit assumptions.
-	**The main parameter you might wanna change is "checker". As of now, safe_find
-		defaults to params["checker"] = lambda x: x > 0.
+	**The main parameter you might wanna change is "is_filled". As of now, safe_find
+		defaults to params["is_filled"] = "x > 0" (aka lambda x: x > 0)
 		This is used to determine if we are looking at a said pixel (aka part of image)
 		or not. So for example, you might want to set a threshold, 
 		or perhaps a specific value if looking 
@@ -35,7 +35,7 @@ def smoothing(data, kernel):
 	for x in range(xlen):
 		for y in range(ylen):
 			for z in range(zlen):
-				set_value(outdata, kernel(data, x, y, z), x, y, z)
+				set_value(outdata, x, y, z, kernel(data, x, y, z))
 
 	return outdata
 
@@ -60,25 +60,12 @@ def average_kernel(data, x, y, z):
 	return sum([get_value(data, i, j, k) for i, j, k in points]) / len(points)
 
 
-'''
-Checks if image is contiguous.
-As of now only naive implementation, so will take a long time to run.
-Set parameter "contiguous" to specify method of computation
-:param data: 3d array of image values
-:param params: dictionary specifying methods
-'''
-def check_contiguous(data, params={}):
-	method = safe_find(params, "contiguous")
-	if method is "naive":
-		return _check_contiguous_naive(data, params)
-
-
 
 '''
 Finds a bounding box around all voxels such that checker(value) == true
 "checker" defaults to lambda value: value > 0
 Bounds are beginning inclusive and end exclusive
-Change "bb_method" parameter to change implementation. Default is naive
+Change "bounding_box_method" parameter to change implementation. Default is naive
 	-"naive": Checks every pixel 
 	-"truncate": Stops checking internal values once extremes are reached. Basically a generic, slightly optimized approach
 	-"outsidein": Starts from outer layer and works inward until hits the image. Good for large images
@@ -86,7 +73,7 @@ Change "bb_method" parameter to change implementation. Default is naive
 :param params: dictionary of parameters
 '''
 def find_bounding_box(data, params={}):
-	method = safe_find(params, "bb_method")
+	method = safe_find(params, "bounding_box_method")
 
 	#untested
 	if method is "naive":
@@ -137,7 +124,7 @@ ASSUMPTION: Principal axis parallel to longest bounding box axis.
 Other principal axes also parallel to bounding box axes.
 Contiguous assumptions as well, at least for convexity
 Default "checker" is lambda value: value > 0
-Parameter "bb_to_las":
+Parameter "bounding_box_to_largest_area_slice":
 *"naive": Naive appraoach
 *"convex": Assumes -area(slicek) is convex in function of k
 :param data: 3d array of image values
@@ -150,7 +137,7 @@ def bounding_box_to_largest_area(data, low, high, params={}):
 	ylen = high[1] - low[1]
 	zlen = high[2] - low[2]
 
-	method = safe_find(params, "bb_to_las")
+	method = safe_find(params, "bounding_box_to_largest_area_slice")
 	checker = safe_find(params, "checker")
 
 	if xlen > ylen:
@@ -242,7 +229,7 @@ Samples a set of points based on given set of points
 :param data: slice
 '''
 def perimeter_points_to_sampled(data, flat_points, params={}):
-	method = safe_find(params, "pp_to_samp")
+	method = safe_find(params, "perimeter_points_to_samples")
 	if method == "naive":
 		return _points_to_sampled_naive(flat_points, params)
 
@@ -272,26 +259,28 @@ A "safe" way to retrieve dictionary values. If key is not found, returns a defau
 :param key: dictionary key
 '''
 def safe_find(d, key):
-	if d is None or key in d:
+	if d == {} or key in d:
+		if key == "n_samples":
+			return int(d[key])
+		if key == "is_filled":
+			return lambda x: eval(d[key])
 		return d[key]
-	if key == "bb_method":
+	if key == "bounding_box_method":
 		return "naive"
-	if key == "bb_params":
+	if key == "bounding_box_parameters":
 		return (0,0)
 	if key == "plane_detect":
 		return "full_naive"
-	if key == "bb_to_las":
-		return "convex"
+	if key == "bounding_box_to_largest_area_slice":
+		return "naive"
 	if key == "plane_area":
 		return "naive"
-	if key == "pp_to_samp":
+	if key == "perimeter_points_to_samples":
 		return "naive" 
-	if key == "n":
+	if key == "n_samples":
 		return 10
-	if key == "checker":
+	if key == "is_filled":
 		return lambda x: x > 0
-	if key == "contiguous":
-		return "naive"
 
 '''
 A way of gathering all possible keys of a params dictionary
@@ -301,15 +290,14 @@ def safe_keys():
 	return _DEFAULT_PARAM_KEYS
 
 _DEFAULT_PARAM_KEYS = [
-	"bb_method",
-	"bb_params",
+	"bounding_box_method",
+	"bounding_box_parameters",
 	"plane_detect",
-	"bb_to_las",
+	"bounding_box_to_largest_area_slice",
 	"plane_area",
-	"pp_to_samp",
-	"n",
-	"checker",
-	"contiguous"]
+	"perimeter_points_to_samples",
+	"n_samples",
+	"is_filled"]
 
 
 
@@ -318,42 +306,9 @@ Specialized Methods. DON'T call these directly
 '''
 
 
-def _check_contiguous_naive(data, params={}):
-	xlen, ylen, zlen = get_size(data)
-	filled = set()
-	connected = set()
-	checked = set()
-	for x in range(xlen):
-		for y in range(ylen):
-			for z in range(zlen):
-				if get_value(data, x, y, z) > 0:
-					start = (x, y, z)
-					break
-
-	connected.add(start)
-	while len(connected) > 0:
-		point = connected.pop()
-		checked.add(point)
-		for x in range(max(0, point[0]-1, min(xlen, point[0] + 2))):
-			for y in range(max(0, point[1]-1, min(ylen, point[1] + 2))):
-				for z in range(max(0, point[2]-1, min(zlen, point[2] + 2))):
-					new_point = (x, y, z)
-					if new_point not in checked and get_value(data, x, y, z) > 0:
-						connected.add(new_point)
-
-	for x in range(xlen):
-		for y in range(ylen):
-			for z in range(zlen):
-				if (x, y, z) not in checked and get_value(data, x, y, z) > 0:
-					return False
-
-	return True
-
-
-
 def _find_bounding_box_naive(data, params={}):
 	xlim, ylim, zlim = get_size(data)
-	checker = safe_find(params, "checker")
+	checker = safe_find(params, "is_filled")
 	found = False
 	for x in range(xlim):
 		for y in range(ylim):
@@ -380,8 +335,8 @@ def _find_bounding_box_naive(data, params={}):
 
 def _find_bounding_box_truncate(data, params={}):
 	xlim, ylim, zlim = get_size(data)
-	checker = safe_find(params, "checker")
-	pa, orien = safe_find(params, "bb_params")
+	checker = safe_find(params, "is_filled")
+	pa, orien = safe_find(params, "bounding_box_parameters")
 	if pa == 0:
 		palen = xlim
 		ilen = ylim
@@ -430,7 +385,7 @@ def _find_bounding_box_truncate(data, params={}):
 
 def _find_bounding_box_outsidein(data, params={}):
 	xlim, ylim, zlim = get_size(data)
-	checker = safe_find(params, "checker")
+	checker = safe_find(params, "is_filled")
 	xlow = ylow = zlow = 0
 	xhigh = xlim - 1
 	yhigh = ylim - 1
@@ -481,7 +436,7 @@ def _find_bounding_box_outsidein(data, params={}):
 
 
 def _plane_detect_fast_naive(getter, ilen, jlen, params={}):
-	checker = safe_find(params, "checker")
+	checker = safe_find(params, "is_filled")
 	for i in range(ilen):
 		for j in range(jlen):
 			if checker(getter(i, j)):
@@ -489,7 +444,7 @@ def _plane_detect_fast_naive(getter, ilen, jlen, params={}):
 		return False
 
 def _plane_detect_full_naive(getter, ilen, jlen, params={}):
-		checker = safe_find(params, "checker")
+		checker = safe_find(params, "is_filled")
 		found = False
 		for i in range(ilen):
 			for j in range(jlen):
@@ -509,7 +464,7 @@ def _plane_detect_full_naive(getter, ilen, jlen, params={}):
 			return found, (0, 0), (0, 0)
 
 def _plane_detect_fast_convex(getter, ilen, jlen, params={}):
-	checker = safe_find(params, "checker")
+	checker = safe_find(params, "is_filled")
 	def line_detect(i):
 			for j in len(jlen):
 				if checker(getter(i, j)):
@@ -576,7 +531,7 @@ def _plane_area_naive(getter, cs, ilen, jlen, params={}):
 
 
 def _points_to_sampled_naive(points, params={}):
-	n = safe_find(params, "n")
+	n = int(safe_find(params, "n_samples"))
 	samples = set()
 	fp = set(flat_points)
 	for _ in range(min(max(0, n), len(fp))):
